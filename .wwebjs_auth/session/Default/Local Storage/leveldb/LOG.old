@@ -1,0 +1,6 @@
+2026/03/16-14:12:11.540 5680 Reusing MANIFEST C:\Users\cesar\echomind\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
+2026/03/16-14:12:11.547 5680 Recovering log #3
+2026/03/16-14:12:11.557 5680 Reusing old log C:\Users\cesar\echomind\.wwebjs_auth\session\Default\Local Storage\leveldb/000003.log 
+2026/03/16-14:13:11.577 56b8 Level-0 table #5: started
+2026/03/16-14:13:11.582 56b8 Level-0 table #5: 17448 bytes OK
+2026/03/16-14:13:11.585 56b8 Delete type=0 #3

@@ -1,0 +1,238 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo principal de usuario (extendido con relaciones a todos los demás)
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+
+  // Relaciones con autenticación (NextAuth)
+  accounts      Account[]
+  sessions      Session[]
+
+  // Relaciones con patrones de comportamiento
+  typingPatterns  TypingPattern[]
+  sleepPatterns   SleepPattern[]
+  activityPatterns ActivityPattern[]
+  socialPatterns  SocialPattern[]
+  alerts          Alert[]
+
+  // Relaciones con tests psicológicos
+  beckInventories BeckInventory[]
+
+  // Relaciones con dispositivos conectados (Fitbit, etc.)
+  connectedDevices ConnectedDevice[]
+  fitbitSleepLogs  FitbitSleepLog[]
+  fitbitActivitySummaries FitbitActivitySummary[]
+
+   emergencyContacts   EmergencyContact[]
+  mentalHealthPros    MentalHealthProfessional[]
+}
+
+// Modelos para autenticación (NextAuth)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Modelos de patrones de comportamiento (EchoMind)
+model TypingPattern {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  timestamp   DateTime @default(now())
+  typingSpeed Float    // caracteres por segundo
+  errorRate   Float    // porcentaje de errores (backspaces / caracteres)
+  pauseCount  Int      // número de pausas largas (>2 segundos)
+  sessionTime Int      // duración de la sesión en segundos
+}
+
+model SleepPattern {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  date        DateTime @unique() // Fecha del registro (ej: 2024-01-01 00:00:00)
+  bedtime     DateTime // Hora de acostarse
+  wakeTime    DateTime // Hora de despertar
+  phoneUses   Int      // Veces que usó el teléfono en la noche
+  sleepHours  Float    // Horas dormidas (puede calcularse de bedtime/waketime)
+  quality     Int?     // Calidad subjetiva (1-5, opcional)
+}
+
+model ActivityPattern {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  date          DateTime @unique()
+  steps         Int
+  activeMinutes Int
+  distance      Float?   // en km
+}
+
+model SocialPattern {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  date         DateTime @unique()
+  messagesSent Int
+  messagesRecv Int
+  callsMade    Int
+  callsRecv    Int
+  socialScore  Float    // Puntuación de interacción social (0-100)
+}
+
+model Alert {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  type     AlertType
+  severity Float    // 0-100
+  message  String
+  isRead   Boolean  @default(false)
+
+  @@index([userId, createdAt])
+}
+
+enum AlertType {
+  TYPING_CHANGE
+  SLEEP_CHANGE
+  ACTIVITY_CHANGE
+  SOCIAL_CHANGE
+  COMBINED_PATTERN
+}
+
+// Modelo para tests de Beck
+model BeckInventory {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+  answers    Json     // Guarda las 21 respuestas (optionId de cada pregunta)
+  totalScore Int
+  level      String   // mínimo, leve, moderado, severo
+}
+
+// Modelos para integración con wearables (Fitbit)
+model ConnectedDevice {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  provider       String   // "fitbit", "garmin", "huawei", etc.
+  providerUserId String   // ID del usuario en el servicio externo
+  accessToken    String   // Token de acceso (encriptar en producción)
+  refreshToken   String   // Token de refresco (encriptar en producción)
+  tokenExpiresAt DateTime // Cuándo expira el accessToken
+  scope          String   // Permisos concedidos
+  lastSyncedAt   DateTime? // Última sincronización exitosa
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@unique([provider, providerUserId])
+}
+
+model FitbitSleepLog {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  logId          String   @unique // ID del registro en Fitbit
+  startTime      DateTime
+  endTime        DateTime
+  duration       Int      // Duración total en minutos
+  efficiency     Int?     // Eficiencia del sueño (0-100)
+  minutesAsleep  Int
+  minutesAwake   Int
+  minutesToFallAsleep Int?
+  timeInBed      Int
+  sleepLevelDeep   Int?   // Minutos en sueño profundo
+  sleepLevelLight  Int?   // Minutos en sueño ligero
+  sleepLevelRem    Int?   // Minutos en sueño REM
+  sleepLevelWake   Int?   // Minutos despierto después de dormirse
+  isMainSleep    Boolean  // true si es sueño nocturno, false si es siesta
+  dataSource     String   // "fitbit"
+  createdAt      DateTime @default(now())
+}
+
+model FitbitActivitySummary {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  date             DateTime @unique() // Fecha del resumen (ej: 2024-01-01 00:00:00)
+  steps            Int
+  distance         Float?   // en km
+  floors           Int?
+  elevation        Float?   // en metros
+  caloriesBurned   Int?
+  caloriesBMR      Int?     // Calorías de metabolismo basal
+  activeMinutes    Int?
+  sedentaryMinutes Int?
+  restingHeartRate Int?
+  dataSource       String   // "fitbit"
+  createdAt        DateTime @default(now())
+}
+model EmergencyContact {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  relationship String
+  email       String
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId]) // opcional, pero recomendado
+}
+
+model MentalHealthProfessional {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  specialty   String? // psicólogo, psiquiatra, etc.
+  email       String
+  phone       String?
+  clinic      String? // nombre de la clínica o consultorio
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([userId]) // opcional, pero recomendado
+}
