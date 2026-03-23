@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { buildWhatsAppURL, isValidPhone } from "@/lib/whatsapp";
+import { buildWhatsAppURL, isValidPhone } from "../lib/whatsapp";
 
 type Contact = {
   name: string;
