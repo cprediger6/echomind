@@ -32,13 +32,6 @@ export default async function ResultadoPage() {
             Resultado del Test de Beck
           </h1>
           <ResultadoBeck test={ultimoTest} />
-          {(ultimoTest.level === "moderado" ||
-            ultimoTest.level === "severo") && (
-            <AlertSupport
-              level={ultimoTest.level}
-              userName={session.user.name ?? undefined}
-            />
-          )}
         </div>
       </div>
       <PieDePagina />
