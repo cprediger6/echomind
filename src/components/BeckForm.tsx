@@ -4,18 +4,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { preguntas } from "@/app/beck/questions";
-import AlertSupport from "@/components/AlertSupport"; // 🔥 IMPORTANTE
+import AlertSupport from "@/components/AlertSupport";
 
 type Answers = Record<number, string>;
 
-export default function BeckForm({ userId }: { userId: string }) {
+export default function BeckForm({
+  userId,
+  userName,
+}: {
+  userId: string;
+  userName?: string;
+}) {
   const router = useRouter();
 
   const [answers, setAnswers] = useState<Answers>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // 🔥 NUEVOS ESTADOS
   const [showAlert, setShowAlert] = useState(false);
   const [levelState, setLevelState] = useState<string | null>(null);
 
@@ -29,15 +34,19 @@ export default function BeckForm({ userId }: { userId: string }) {
 
   const calcularPuntaje = (): number => {
     let total = 0;
+
     preguntas.forEach((pregunta) => {
       const selectedOptionId = answers[pregunta.id];
+
       if (selectedOptionId) {
         const opcion = pregunta.opciones.find(
           (o) => o.optionId === selectedOptionId,
         );
+
         if (opcion) total += opcion.valor;
       }
     });
+
     return total;
   };
 
@@ -50,6 +59,8 @@ export default function BeckForm({ userId }: { userId: string }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (loading) return; // 🔥 evita doble envío
 
     if (!todasRespondidas()) {
       setError("Por favor responde todas las preguntas.");
@@ -65,7 +76,9 @@ export default function BeckForm({ userId }: { userId: string }) {
     try {
       const res = await fetch("/api/beck", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           userId,
           answers,
@@ -81,11 +94,11 @@ export default function BeckForm({ userId }: { userId: string }) {
 
       const resultLevel = level.toLowerCase().trim();
 
-      // 🔥 AQUÍ ESTÁ LA MAGIA
+      // 🔥 MOSTRAR MODAL SI ES CRÍTICO
       if (resultLevel === "moderado" || resultLevel === "severo") {
         setLevelState(resultLevel);
         setShowAlert(true);
-        return; // ❗ NO redirige
+        return;
       }
 
       // 👉 si no es crítico
@@ -94,7 +107,7 @@ export default function BeckForm({ userId }: { userId: string }) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError(String(err));
+        setError("Ocurrió un error inesperado");
       }
     } finally {
       setLoading(false);
@@ -106,7 +119,7 @@ export default function BeckForm({ userId }: { userId: string }) {
       <form onSubmit={handleSubmit} className="space-y-8">
         {preguntas.map((pregunta) => (
           <div key={pregunta.id} className="border-b pb-6">
-            <h3 className="text-lg font-semibold mb-3">
+            <h3 className="text-lg font-semibold mb-3 text-gray-900">
               {pregunta.id}. {pregunta.texto}
             </h3>
 
@@ -133,7 +146,7 @@ export default function BeckForm({ userId }: { userId: string }) {
                     />
 
                     <span
-                      className={`text-sm text-gray-700 ${
+                      className={`text-sm text-gray-800 ${
                         isSelected ? "font-medium" : ""
                       }`}
                     >
@@ -153,19 +166,21 @@ export default function BeckForm({ userId }: { userId: string }) {
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white px-3 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="w-full bg-blue-600 text-white px-3 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? "Enviando..." : "Ver resultado"}
         </button>
 
-        <p className="text-xs text-gray-500 mt-4">
-          * Este test es una herramienta de evaluación inicial...
+        <p className="text-xs text-gray-600 mt-4">
+          * Este test es una herramienta de evaluación inicial. No constituye un
+          diagnóstico definitivo. Si tienes inquietudes, consulta a un
+          profesional.
         </p>
       </form>
 
-      {/* 🔥 MODAL AQUÍ */}
+      {/* 🔥 MODAL */}
       {showAlert && levelState && (
-        <AlertSupport level={levelState} userName={undefined} />
+        <AlertSupport level={levelState} userName={userName} />
       )}
     </>
   );
