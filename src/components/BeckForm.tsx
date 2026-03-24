@@ -90,8 +90,12 @@ export default function BeckForm({ userId }: { userId: string }) {
 
       // 👉 si no es crítico
       router.push("/beck/resultado");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(String(err));
+      }
     } finally {
       setLoading(false);
     }
