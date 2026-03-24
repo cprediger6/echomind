@@ -12,17 +12,17 @@ export async function sendEmail({
   html: string;
 }) {
   try {
-    const data = await resend.emails.send({
+    const response = await resend.emails.send({
       from: process.env.EMAIL_FROM as string,
       to,
       subject,
       html,
     });
 
-    console.log("Email enviado:", data);
-    return data;
+    console.log("✅ Email enviado:", response);
+    return response;
   } catch (error) {
-    console.error("Error enviando email:", error);
+    console.error("❌ Error enviando email:", error);
     throw error;
   }
 }
