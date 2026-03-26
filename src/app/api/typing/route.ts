@@ -14,7 +14,6 @@ export async function POST(request: Request) {
     const { typingSpeed, errorRate, pauseCount, sessionTime } =
       await request.json();
 
-    // Validaciones básicas
     if (
       typingSpeed === undefined ||
       errorRate === undefined ||
@@ -34,9 +33,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // Si la tasa de errores es alta, enviar alertas
     if (errorRate > 15) {
-      // Crear alerta en BD (sin asignar a variable)
       await prisma.alert.create({
         data: {
           userId: session.user.id,
@@ -46,7 +43,6 @@ export async function POST(request: Request) {
         },
       });
 
-      // Obtener contactos del usuario (usamos findFirst porque userId no es único)
       const emergency = await prisma.emergencyContact.findFirst({
         where: { userId: session.user.id },
       });
@@ -54,12 +50,10 @@ export async function POST(request: Request) {
         where: { userId: session.user.id },
       });
 
-      // Plantilla de correo (usamos un HTML simple, sin depender de una función externa)
       const subject = `Alerta: Tasa de errores alta en escritura (${errorRate.toFixed(1)}%)`;
       const html = `<p>La persona <strong>${session.user.name || "Persona"}</strong> ha presentado una tasa de errores alta (${errorRate.toFixed(1)}%) al escribir.</p>
                     <p>Por favor, contacta con ella si lo consideras necesario.</p>`;
 
-      // Enviar correos si existen los contactos
       if (emergency) {
         try {
           await sendEmail(emergency.email, subject, html);
@@ -79,6 +73,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, pattern });
   } catch (error) {
     console.error("Error al guardar patrón:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get("limit")
+      ? parseInt(searchParams.get("limit")!)
+      : 30;
+
+    const patterns = await prisma.typingPattern.findMany({
+      where: { userId: session.user.id },
+      orderBy: { timestamp: "asc" },
+      take: limit,
+    });
+
+    return NextResponse.json(patterns);
+  } catch (error) {
+    console.error("Error fetching typing patterns:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

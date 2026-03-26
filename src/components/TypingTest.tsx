@@ -1,20 +1,21 @@
-// src/components/TypingTest.tsx
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 
-// Tiempo de inactividad en milisegundos (10 segundos)
 const INACTIVITY_TIMEOUT = 10000;
 
-// Texto de ejemplo para la prueba de escritura
 const SAMPLE_TEXT =
   "Escribe este texto de prueba para medir tu velocidad de escritura y precisión. Intenta ser natural, no te preocupes por los errores, solo escribe como lo harías normalmente.";
 
 interface TypingTestProps {
   userId: string;
+  onSaveComplete?: () => void; // optional callback after successful save
 }
 
-export default function TypingTest({ userId }: TypingTestProps) {
+export default function TypingTest({
+  userId,
+  onSaveComplete,
+}: TypingTestProps) {
   const [text, setText] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -24,17 +25,15 @@ export default function TypingTest({ userId }: TypingTestProps) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Referencias para timeouts
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Función para guardar los datos
   const saveTypingData = useCallback(async () => {
     if (!userId || !startTime || !lastKeyTime) return;
 
     const endTime = Date.now();
-    const sessionTime = Math.round((endTime - startTime) / 1000); // en segundos
-    const typingSpeed = text.length / sessionTime; // caracteres por segundo
+    const sessionTime = Math.round((endTime - startTime) / 1000);
+    const typingSpeed = text.length / sessionTime;
 
     const payload = {
       typingSpeed: parseFloat(typingSpeed.toFixed(2)),
@@ -54,13 +53,13 @@ export default function TypingTest({ userId }: TypingTestProps) {
       });
       if (res.ok) {
         setMessage("✅ Datos guardados correctamente");
-        // Reiniciar sesión
         setIsActive(false);
         setStartTime(null);
         setLastKeyTime(null);
         setPauseCount(0);
         setErrorCount(0);
         setText("");
+        if (onSaveComplete) onSaveComplete(); // notify parent to refresh data
       } else {
         setMessage("❌ Error al guardar");
       }
@@ -68,37 +67,33 @@ export default function TypingTest({ userId }: TypingTestProps) {
       setMessage("❌ Error de red");
     } finally {
       setSaving(false);
-      // Limpiar mensaje después de 3 segundos
       setTimeout(() => setMessage(""), 3000);
     }
-  }, [userId, startTime, lastKeyTime, text, errorCount, pauseCount]);
+  }, [
+    userId,
+    startTime,
+    lastKeyTime,
+    text,
+    errorCount,
+    pauseCount,
+    onSaveComplete,
+  ]);
 
-  // Manejar inactividad
   useEffect(() => {
     if (isActive && lastKeyTime) {
-      // Limpiar timer anterior
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
-      // Configurar nuevo timer
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = setTimeout(() => {
-        if (isActive) {
-          saveTypingData();
-        }
+        if (isActive) saveTypingData();
       }, INACTIVITY_TIMEOUT);
     }
     return () => {
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
   }, [isActive, lastKeyTime, saveTypingData]);
 
-  // Manejar tecleo
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const now = Date.now();
 
-    // Iniciar sesión si no está activa
     if (!isActive) {
       setIsActive(true);
       setStartTime(now);
@@ -109,12 +104,10 @@ export default function TypingTest({ userId }: TypingTestProps) {
       return;
     }
 
-    // Calcular pausa (más de 2 segundos entre tecleos)
     if (lastKeyTime && now - lastKeyTime > 2000) {
       setPauseCount((prev) => prev + 1);
     }
 
-    // Detectar errores (tecla backspace)
     if (e.key === "Backspace") {
       setErrorCount((prev) => prev + 1);
     }
@@ -122,23 +115,16 @@ export default function TypingTest({ userId }: TypingTestProps) {
     setLastKeyTime(now);
   };
 
-  // Manejar cambio de texto (para controlar longitud)
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
   };
 
-  // Manejar pérdida de foco
   const handleBlur = () => {
-    if (isActive) {
-      saveTypingData();
-    }
+    if (isActive) saveTypingData();
   };
 
-  // Guardar manualmente
   const handleManualSave = () => {
-    if (isActive) {
-      saveTypingData();
-    }
+    if (isActive) saveTypingData();
   };
 
   return (
