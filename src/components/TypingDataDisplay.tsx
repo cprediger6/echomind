@@ -6,7 +6,7 @@ import TypingTest from "./TypingTest";
 
 interface TypingPattern {
   id: string;
-  timestamp: string; // from API, string
+  timestamp: string;
   typingSpeed: number;
   errorRate: number;
   pauseCount: number;
@@ -15,12 +15,17 @@ interface TypingPattern {
 
 interface TypingDataDisplayProps {
   userId: string;
+  refreshTrigger: number;
+  onSaveComplete: () => void;
 }
 
-export default function TypingDataDisplay({ userId }: TypingDataDisplayProps) {
+export default function TypingDataDisplay({
+  userId,
+  refreshTrigger,
+  onSaveComplete,
+}: TypingDataDisplayProps) {
   const [patterns, setPatterns] = useState<TypingPattern[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const fetchData = useCallback(async () => {
     try {
@@ -40,22 +45,8 @@ export default function TypingDataDisplay({ userId }: TypingDataDisplayProps) {
     fetchData();
   }, [fetchData, refreshTrigger]);
 
-  const handleSaveComplete = () => {
-    setRefreshTrigger((prev) => prev + 1);
-  };
-
-  const recentPatterns = patterns.slice(-7);
-  const avgTypingSpeed = recentPatterns.length
-    ? recentPatterns.reduce((acc, p) => acc + p.typingSpeed, 0) /
-      recentPatterns.length
-    : 0;
-  const avgErrorRate = recentPatterns.length
-    ? recentPatterns.reduce((acc, p) => acc + p.errorRate, 0) /
-      recentPatterns.length
-    : 0;
-
-  const lastPattern = patterns[patterns.length - 1];
   const recentTests = [...patterns].reverse().slice(0, 5);
+  const lastPattern = patterns[patterns.length - 1];
 
   if (loading && patterns.length === 0) {
     return (
@@ -70,51 +61,7 @@ export default function TypingDataDisplay({ userId }: TypingDataDisplayProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="text-3xl mb-2">📱</div>
-          <h3 className="font-semibold text-lg">Escritura</h3>
-          <p className="text-sm text-gray-500">Últimos 7 días</p>
-          <div className="mt-2">
-            {recentPatterns.length > 0 ? (
-              <>
-                <p className="text-sm">
-                  <span className="font-bold">Velocidad:</span>{" "}
-                  {avgTypingSpeed.toFixed(1)} cps
-                </p>
-                <p className="text-sm">
-                  <span className="font-bold">Errores:</span>{" "}
-                  {avgErrorRate.toFixed(1)}%
-                </p>
-              </>
-            ) : (
-              <p className="text-gray-400">Sin datos aún</p>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="text-3xl mb-2">🌙</div>
-          <h3 className="font-semibold text-lg">Sueño</h3>
-          <p className="text-sm text-gray-500">Próximamente</p>
-          <div className="mt-2 text-gray-400">Sin datos</div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="text-3xl mb-2">🚶</div>
-          <h3 className="font-semibold text-lg">Actividad</h3>
-          <p className="text-sm text-gray-500">Próximamente</p>
-          <div className="mt-2 text-gray-400">Sin datos</div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="text-3xl mb-2">💬</div>
-          <h3 className="font-semibold text-lg">Social</h3>
-          <p className="text-sm text-gray-500">Próximamente</p>
-          <div className="mt-2 text-gray-400">Sin datos</div>
-        </div>
-      </div>
-
+      {/* Gráfica */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
         <h3 className="text-xl font-semibold mb-4">Tendencias de escritura</h3>
         {patterns.length > 0 ? (
@@ -131,6 +78,7 @@ export default function TypingDataDisplay({ userId }: TypingDataDisplayProps) {
         )}
       </div>
 
+      {/* Tabla de pruebas recientes */}
       {recentTests.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h3 className="text-xl font-semibold mb-4">
@@ -188,8 +136,10 @@ export default function TypingDataDisplay({ userId }: TypingDataDisplayProps) {
         </div>
       )}
 
-      <TypingTest userId={userId} onSaveComplete={handleSaveComplete} />
+      {/* Test */}
+      <TypingTest userId={userId} onSaveComplete={onSaveComplete} />
 
+      {/* Alerta */}
       {lastPattern && lastPattern.errorRate > 15 && (
         <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
           <div className="flex">
