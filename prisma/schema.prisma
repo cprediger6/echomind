@@ -23,7 +23,7 @@ model User {
   // Relaciones con autenticación (NextAuth)
   accounts      Account[]
   sessions      Session[]
-
+  moodentrys      MoodEntry[]
   // Relaciones con patrones de comportamiento
   typingPatterns  TypingPattern[]
   sleepPatterns   SleepPattern[]
@@ -235,4 +235,14 @@ model MentalHealthProfessional {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   @@unique([userId]) // opcional, pero recomendado
+}
+model MoodEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moodScore Int      // 1 = muy mal, 5 = muy bien
+  note      String?  // texto opcional
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

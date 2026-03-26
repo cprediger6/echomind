@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import PieDePagina from "@/components/PieDePagina";
 import Nav from "@/components/nav";
 import TypingDataDisplay from "@/components/TypingDataDisplay";
-
+import MoodWidget from "@/components/MoodWidget";
 export default async function Dashboard() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
@@ -237,7 +237,28 @@ export default async function Dashboard() {
             </div>
           </div>
         </div>
+        {/* NUEVA SECCIÓN: DIARIO DE ÁNIMO CON PERSONAJE */}
+        <div className="mb-8">
+          <MoodWidget />
+        </div>
 
+        {/* Botones de Beck */}
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link
+              href="/beck"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-center"
+            >
+              Realizar test de Beck
+            </Link>
+            <Link
+              href="/beck/resultado"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-center"
+            >
+              Ver resultados Beck
+            </Link>
+          </div>
+        </div>
         {/* Beck test buttons */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
